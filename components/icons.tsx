@@ -56,7 +56,7 @@ export const AttachmentIcon = () => {
   );
 };
 
-export const VercelIcon = ({ size }) => {
+export const VercelIcon = ({ size }: { size?: number }) => {
   size = size || 17; // Asigna un valor predeterminado si size no está definido
   return (
     <img
@@ -67,7 +67,6 @@ export const VercelIcon = ({ size }) => {
     />
   );
 };
-
 
 export const GitIcon = () => {
   return (
