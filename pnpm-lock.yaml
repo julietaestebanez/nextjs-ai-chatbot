@@ -68,6 +68,9 @@ importers:
       ai:
         specifier: 4.0.20
         version: 4.0.20(react@19.0.0-rc-45804af1-20241021)(zod@3.23.8)
+      app:
+        specifier: link:@/app
+        version: link:@/app
       bcrypt-ts:
         specifier: ^5.0.2
         version: 5.0.2

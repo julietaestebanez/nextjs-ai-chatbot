@@ -15,8 +15,8 @@ export const models: Array<Model> = [
     description: 'Small model for fast, lightweight tasks',
   },
   {
-    id: 'gpt-4o',
-    label: 'GPT 4o',
+    id: 'asst_ciXkMVsNohSyH3xKi4eZIML2',
+    label: 'vector',
     apiIdentifier: 'gpt-4o',
     description: 'For complex, multi-step tasks',
   },
