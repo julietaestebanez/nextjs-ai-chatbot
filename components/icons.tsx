@@ -56,15 +56,18 @@ export const AttachmentIcon = () => {
   );
 };
 
-export const VercelIcon = () => {
+export const VercelIcon = ({ size }) => {
+  size = size || 17; // Asigna un valor predeterminado si size no está definido
   return (
     <img
-      src="/images/journeys.png"
+      src="/images/journeys.png" // Ruta a tu archivo
       alt="Journeys"
-      className="w-50 h-50 object-contain"
+      width={size}
+      height={size}
     />
   );
 };
+
 
 export const GitIcon = () => {
   return (
