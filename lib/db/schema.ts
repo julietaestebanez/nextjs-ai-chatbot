@@ -9,6 +9,7 @@ import {
   primaryKey,
   foreignKey,
   boolean,
+  vector,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
@@ -113,3 +114,19 @@ export const suggestion = pgTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+export const embeddings = pgTable('Embeddings', {
+  // Tu Neon usa gen_random_uuid() → Drizzle: defaultRandom()
+  id: uuid('id').defaultRandom().primaryKey().notNull(),
+
+  // TEXT NOT NULL
+  content: text('content').notNull(),
+
+  // VECTOR(1536) NOT NULL
+  embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+
+  // TIMESTAMP DEFAULT now()
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+// Para que puedas inferir su tipo
+export type Embeddings = InferSelectModel<typeof embeddings>;
