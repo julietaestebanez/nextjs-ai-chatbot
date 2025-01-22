@@ -4,7 +4,6 @@ export async function POST(req: NextRequest) {
     try {
         const { email, password, content } = await req.json();
 
-        // Validación básica de credenciales (puedes hacer una consulta a tu base de datos aquí)
         if (email !== process.env.AUTH_EMAIL || password !== process.env.AUTH_PASSWORD) {
             return NextResponse.json({ message: 'Credenciales incorrectas' }, { status: 401 });
         }
@@ -13,6 +12,17 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ message: 'Documento guardado exitosamente', data: content }, { status: 200 });
     } catch (error) {
-        return NextResponse.json({ message: 'Error interno del servidor', error: error.message }, { status: 500 });
+        let errorMessage = 'Error interno del servidor';
+
+        // Verificación segura del tipo de error
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+
+        console.error("Error en la API:", errorMessage);
+
+        return NextResponse.json({ message: errorMessage }, { status: 500 });
     }
 }
