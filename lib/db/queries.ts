@@ -1,10 +1,15 @@
 import 'server-only';
 
 import { genSaltSync, hashSync } from 'bcrypt-ts';
-import { and, asc, desc, eq, gt, gte } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
+import { generateEmbeddings } from '@/lib/ai/embedding';
+
+// Estos imports corresponden a tu schema de Drizzle; 
+// si tu tabla "Embeddings" no está definida aquí, 
+// puedes seguir usando SQL directo como se ve en la función nueva.
 import {
   user,
   chat,
@@ -16,15 +21,16 @@ import {
   message,
   vote,
 } from './schema';
-import { BlockKind } from '@/components/block';
 
-// Optionally, if not using email/pass login, you can
-// use the Drizzle adapter for Auth.js / NextAuth
-// https://authjs.dev/reference/adapter/drizzle
+import { BlockKind } from '@/components/block';
 
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
+
+/* ------------------------------------------------------------------
+   AQUÍ COMIENZAN TUS FUNCIONES YA EXISTENTES
+   ------------------------------------------------------------------ */
 
 export async function getUser(email: string): Promise<Array<User>> {
   try {
@@ -162,7 +168,7 @@ export async function getVotesByChatId({ id }: { id: string }) {
   try {
     return await db.select().from(vote).where(eq(vote.chatId, id));
   } catch (error) {
-    console.error('Failed to get votes by chat id from database', error);
+    console.error('Failed to get votes by chat id from database');
     throw error;
   }
 }
@@ -325,6 +331,58 @@ export async function updateChatVisiblityById({
     return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
   } catch (error) {
     console.error('Failed to update chat visibility in database');
+    throw error;
+  }
+}
+
+/* ------------------------------------------------------------------
+   NUEVA FUNCIÓN PARA INSERTAR EMBEDDINGS EN LA TABLA "Embeddings"
+   ------------------------------------------------------------------ */
+
+/**
+ * Inserta un nuevo registro en la tabla "Embeddings",
+ * generando automáticamente el vector de embedding a partir de `content`.
+ *
+ * Asegúrate de que tu tabla "Embeddings" tenga las columnas:
+ *  - "id" (si la usas en tu BD),
+ *  - "content" (TEXT),
+ *  - "embedding" (vector(1536) o la dimensión que uses),
+ *  - "metadata" (JSONB) si quieres guardar datos adicionales.
+ */
+export async function saveEmbedding({
+  id,
+  content,
+  metadata = {},
+}: {
+  id?: string; // Hazlo opcional si en tu tabla "Embeddings" id es SERIAL
+  content: string;
+  metadata?: Record<string, any>;
+}) {
+  try {
+    // 1. Generar el embedding usando tu función de embeddings
+    const [vector] = await generateEmbeddings([content]);
+
+    // 2. Darle formato de vector a la manera de pgvector: '[x,y,z,...]'
+    const embeddingVector = `[${vector.join(',')}]`;
+
+    // 3. Insertar en la tabla "Embeddings"
+    //    - Si "id" es PRIMARY KEY auto-incremental, no lo incluyas en el VALUES
+    //    - Si es manual, inclúyelo
+    await db.execute(sql`
+      INSERT INTO "Embeddings" 
+      (content, embedding, metadata ${id ? sql`, id` : sql``})
+      VALUES (
+        ${content},
+        ${embeddingVector}::vector,
+        ${JSON.stringify(metadata)}::jsonb
+        ${id ? sql`, ${id}` : sql``}
+      )
+    `);
+
+    // Opcionalmente, podrías retornar algo
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save embedding in "Embeddings" table', error);
     throw error;
   }
 }
