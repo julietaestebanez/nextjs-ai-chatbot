@@ -360,7 +360,7 @@ export async function saveEmbedding({
 }) {
   try {
     // 1. Generar el embedding usando tu función de embeddings
-    const [vector] = await generateEmbeddings([content]);
+    const vector = await generateEmbeddings(content);
 
     // 2. Darle formato de vector a la manera de pgvector: '[x,y,z,...]'
     const embeddingVector = `[${vector.join(',')}]`;
