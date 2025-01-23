@@ -1,3 +1,5 @@
+// lib/db/queries.ts
+
 import 'server-only';
 
 import { genSaltSync, hashSync } from 'bcrypt-ts';
@@ -7,9 +9,8 @@ import postgres from 'postgres';
 
 import { generateEmbeddings } from '@/lib/ai/embedding';
 
-// Estos imports corresponden a tu schema de Drizzle; 
-// si tu tabla "Embeddings" no está definida aquí, 
-// puedes seguir usando SQL directo como se ve en la función nueva.
+// Ajusta estos imports según tu schema; si usas `Embeddings` en Drizzle,
+// añádelo también. Pero no es obligatorio si usarás `sql` puro.
 import {
   user,
   chat,
@@ -29,7 +30,7 @@ const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
 /* ------------------------------------------------------------------
-   AQUÍ COMIENZAN TUS FUNCIONES YA EXISTENTES
+   FUNCIONES EXISTENTES
    ------------------------------------------------------------------ */
 
 export async function getUser(email: string): Promise<Array<User>> {
@@ -336,50 +337,52 @@ export async function updateChatVisiblityById({
 }
 
 /* ------------------------------------------------------------------
-   NUEVA FUNCIÓN PARA INSERTAR EMBEDDINGS EN LA TABLA "Embeddings"
+   FUNCIÓN PARA INSERTAR EMBEDDINGS EN LA TABLA "Embeddings"
    ------------------------------------------------------------------ */
-
 /**
  * Inserta un nuevo registro en la tabla "Embeddings",
  * generando automáticamente el vector de embedding a partir de `content`.
  *
  * Asegúrate de que tu tabla "Embeddings" tenga las columnas:
- *  - "id" (si la usas en tu BD),
- *  - "content" (TEXT),
- *  - "embedding" (vector(1536) o la dimensión que uses),
- *  - "metadata" (JSONB) si quieres guardar datos adicionales.
+ *   id (uuid, si la usas, o SERIAL)
+ *   content (TEXT)
+ *   embedding (vector(1536))
+ *   createdAt (TIMESTAMP)
+ *   (Opcional) metadata (JSONB), si la implementas
  */
 export async function saveEmbedding({
   id,
   content,
-  metadata = {},
 }: {
-  id?: string; // Hazlo opcional si en tu tabla "Embeddings" id es SERIAL
+  id?: string; 
   content: string;
-  metadata?: Record<string, any>;
 }) {
   try {
-    // 1. Generar el embedding usando tu función de embeddings
+    // 1. Genera el embedding con tu función `generateEmbeddings`
     const vector = await generateEmbeddings(content);
 
-    // 2. Darle formato de vector a la manera de pgvector: '[x,y,z,...]'
+    // 2. Convierte el array a un string pgvector, ej: "[0.1,0.2,...]"
     const embeddingVector = `[${vector.join(',')}]`;
 
     // 3. Insertar en la tabla "Embeddings"
-    //    - Si "id" es PRIMARY KEY auto-incremental, no lo incluyas en el VALUES
-    //    - Si es manual, inclúyelo
+    //    Si tu tabla "Embeddings" genera automáticamente "id",
+    //    quita la parte del id en el INSERT y en el VALUES.
     await db.execute(sql`
       INSERT INTO "Embeddings" 
-      (content, embedding, metadata ${id ? sql`, id` : sql``})
+      (
+        content,
+        embedding
+        ${id ? sql`, id` : sql``}, 
+        "createdAt"
+      )
       VALUES (
         ${content},
-        ${embeddingVector}::vector,
-        ${JSON.stringify(metadata)}::jsonb
-        ${id ? sql`, ${id}` : sql``}
+        ${embeddingVector}::vector
+        ${id ? sql`, ${id}` : sql``},
+        NOW()
       )
     `);
 
-    // Opcionalmente, podrías retornar algo
     return { success: true };
   } catch (error) {
     console.error('Failed to save embedding in "Embeddings" table', error);
