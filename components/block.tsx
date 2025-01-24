@@ -175,22 +175,14 @@ function PureBlock({
           }
 
           if (currentDocument.content !== updatedContent) {
-            const response = await fetch(`/api/document?id=${block.documentId}`, {
+            await fetch(`/api/document?id=${block.documentId}`, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
               body: JSON.stringify({
                 title: block.title,
                 content: updatedContent,
                 kind: block.kind,
-                updateEmbedding: true // Flag para indicar que debe actualizarse el embedding
               }),
             });
-
-            if (!response.ok) {
-              console.error('Error updating document:', await response.text());
-            }
 
             setIsContentDirty(false);
 
