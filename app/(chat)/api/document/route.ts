@@ -69,17 +69,17 @@ export async function POST(request: Request) {
       userId: session.user.id,
     });
 
-    // 4. (NUEVO) Guardar embedding en tu tabla "Embeddings"
-    //    - Si tu tabla "Embeddings" usa SERIAL para ID, no necesitas pasar `id`.
-    //    - Si quieres que coincida con el ID del documento, pásalo.
-    //    - Toma en cuenta que tu migración actual dice "id SERIAL", 
-    //      mientras que tu schema drizzle dice "uuid".
-    //      Con SERIAL, se ignora el `id` que pases. 
-    //      Así que lo más seguro es:
-    await saveEmbedding({
-      // id, // <--- Descomenta si quieres forzar que sea el mismo; 
-      content,
-    });
+    // Guardar embedding con manejo de errores
+    try {
+      await saveEmbedding({
+        id,
+        content,
+      });
+      console.log('Embedding guardado exitosamente');
+    } catch (error) {
+      console.error('Error al guardar embedding:', error);
+      // Continuamos aunque falle el embedding para no interrumpir el guardado del documento
+    }
 
     return Response.json(document, { status: 200 });
   }
