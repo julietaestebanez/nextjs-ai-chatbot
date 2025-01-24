@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveDocument, saveEmbedding } from '@/lib/db/queries';
-import { BlockKind } from '@/components/block';
 
 export async function POST(req: NextRequest) {
   try {
