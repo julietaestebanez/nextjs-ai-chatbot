@@ -87,8 +87,8 @@ export async function POST(request: Request) {
       console.error({
         documentId: id,
         contentLength: content.length,
-        errorType: error.name,
-        errorMessage: error.message
+        errorType: error instanceof Error ? error.name : 'Unknown Error',
+        errorMessage: error instanceof Error ? error.message : String(error)
       });
     }
 
