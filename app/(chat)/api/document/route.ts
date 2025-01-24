@@ -6,8 +6,9 @@ import {
   deleteDocumentsByIdAfterTimestamp,
   getDocumentsById,
   saveDocument,
-  saveEmbedding,  // <-- NUEVO: importar la función para guardar embeddings
+  saveEmbedding,
 } from '@/lib/db/queries';
+import { generateEmbeddings } from '@/lib/ai/embedding';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
