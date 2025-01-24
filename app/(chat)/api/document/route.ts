@@ -69,16 +69,26 @@ export async function POST(request: Request) {
       userId: session.user.id,
     });
 
-    // Guardar embedding con manejo de errores
+    // Generar y guardar embedding
     try {
+      const embedding = await generateEmbeddings(content);
+      if (!embedding) {
+        throw new Error('No se pudo generar el embedding');
+      }
+      
       await saveEmbedding({
         id,
         content,
       });
-      console.log('Embedding guardado exitosamente');
+      console.log(`Embedding generado y guardado exitosamente para documento ${id}`);
     } catch (error) {
-      console.error('Error al guardar embedding:', error);
-      // Continuamos aunque falle el embedding para no interrumpir el guardado del documento
+      console.error('Error al procesar embedding:', error);
+      console.error({
+        documentId: id,
+        contentLength: content.length,
+        errorType: error.name,
+        errorMessage: error.message
+      });
     }
 
     return Response.json(document, { status: 200 });
