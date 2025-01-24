@@ -1,5 +1,3 @@
-// app/(chat)/api/document/route.ts
-
 import { auth } from '@/app/(auth)/auth';
 import { BlockKind } from '@/components/block';
 import {
@@ -61,7 +59,7 @@ export async function POST(request: Request) {
   }: { content: string; title: string; kind: BlockKind } = await request.json();
 
   if (session.user?.id) {
-    // 3. Guardar documento en tu tabla "Document"
+    // 3. Guardar documento en la tabla "Document"
     const document = await saveDocument({
       id,
       content,
@@ -70,17 +68,19 @@ export async function POST(request: Request) {
       userId: session.user.id,
     });
 
-    // Generar y guardar embedding
+    // 4. Generar y guardar embedding (una sola vez)
     try {
       const embedding = await generateEmbeddings(content);
       if (!embedding) {
         throw new Error('No se pudo generar el embedding');
       }
-      
+
       await saveEmbedding({
-        id,
+        documentId: id, // Relaciona tu documento con este embedding
         content,
+        embedding,
       });
+
       console.log(`Embedding generado y guardado exitosamente para documento ${id}`);
     } catch (error) {
       console.error('Error al procesar embedding:', error);
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
         documentId: id,
         contentLength: content.length,
         errorType: error instanceof Error ? error.name : 'Unknown Error',
-        errorMessage: error instanceof Error ? error.message : String(error)
+        errorMessage: error instanceof Error ? error.message : String(error),
       });
     }
 

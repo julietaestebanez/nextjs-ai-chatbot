@@ -1,5 +1,3 @@
-// lib/db/queries.ts
-
 import 'server-only';
 
 import { genSaltSync, hashSync } from 'bcrypt-ts';
@@ -7,10 +5,6 @@ import { and, asc, desc, eq, gt, gte, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-import { generateEmbeddings } from '@/lib/ai/embedding';
-
-// Ajusta estos imports según tu schema; si usas `Embeddings` en Drizzle,
-// añádelo también. Pero no es obligatorio si usarás `sql` puro.
 import {
   user,
   chat,
@@ -21,16 +15,17 @@ import {
   type Message,
   message,
   vote,
+  embeddings,
 } from './schema';
 
 import { BlockKind } from '@/components/block';
 
-// biome-ignore lint: Forbidden non-null assertion.
+// Conexión a Neon (o tu Postgres)
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
 /* ------------------------------------------------------------------
-   FUNCIONES EXISTENTES
+   Ejemplos de funciones existentes (Usuarios, Chats, etc.)
    ------------------------------------------------------------------ */
 
 export async function getUser(email: string): Promise<Array<User>> {
@@ -174,6 +169,9 @@ export async function getVotesByChatId({ id }: { id: string }) {
   }
 }
 
+/* ------------------------------------------------------------------
+   Funciones específicas para Document
+   ------------------------------------------------------------------ */
 export async function saveDocument({
   id,
   title,
@@ -260,6 +258,9 @@ export async function deleteDocumentsByIdAfterTimestamp({
   }
 }
 
+/* ------------------------------------------------------------------
+   Funciones específicas para Suggestion
+   ------------------------------------------------------------------ */
 export async function saveSuggestions({
   suggestions,
 }: {
@@ -291,6 +292,9 @@ export async function getSuggestionsByDocumentId({
   }
 }
 
+/* ------------------------------------------------------------------
+   Funciones adicionales (Mensajes, etc.)
+   ------------------------------------------------------------------ */
 export async function getMessageById({ id }: { id: string }) {
   try {
     return await db.select().from(message).where(eq(message.id, id));
@@ -337,55 +341,48 @@ export async function updateChatVisiblityById({
 }
 
 /* ------------------------------------------------------------------
-   FUNCIÓN PARA INSERTAR EMBEDDINGS EN LA TABLA "Embeddings"
+   FUNCIÓN PARA INSERTAR EMBEDDINGS EN LA TABLA "embeddings"
    ------------------------------------------------------------------ */
+
 /**
- * Inserta un nuevo registro en la tabla "Embeddings",
- * generando automáticamente el vector de embedding a partir de `content`.
- *
- * Asegúrate de que tu tabla "Embeddings" tenga las columnas:
- *   id (uuid, si la usas, o SERIAL)
- *   content (TEXT)
- *   embedding (vector(1536))
- *   createdAt (TIMESTAMP)
- *   (Opcional) metadata (JSONB), si la implementas
+ * Inserta un nuevo registro en la tabla "embeddings",
+ * usando el vector (array de floats) que se pasa ya calculado.
+ * 
+ * La columna "document_id" es opcional y sirve para relacionar
+ * el embedding con el documento correspondiente.
  */
 export async function saveEmbedding({
-  id,
+  documentId,
   content,
+  embedding,
 }: {
-  id?: string; 
+  documentId?: string;
   content: string;
+  embedding: number[];
 }) {
   try {
-    // 1. Genera el embedding con tu función `generateEmbeddings`
-    const vector = await generateEmbeddings(content);
+    // 1. Convierte el array a un string pgvector, ej: "[0.1,0.2,...]"
+    const embeddingVector = `[${embedding.join(',')}]`;
 
-    // 2. Convierte el array a un string pgvector, ej: "[0.1,0.2,...]"
-    const embeddingVector = `[${vector.join(',')}]`;
-
-    // 3. Insertar en la tabla "Embeddings"
-    //    Si tu tabla "Embeddings" genera automáticamente "id",
-    //    quita la parte del id en el INSERT y en el VALUES.
+    // 2. Insertar en la tabla "embeddings"
     await db.execute(sql`
-      INSERT INTO "Embeddings" 
-      (
+      INSERT INTO embeddings (
+        document_id,
         content,
-        embedding
-        ${id ? sql`, id` : sql``}, 
-        "createdAt"
+        embedding,
+        created_at
       )
       VALUES (
+        ${documentId ? documentId : null}::uuid,
         ${content},
-        ${embeddingVector}::vector
-        ${id ? sql`, ${id}` : sql``},
+        ${embeddingVector}::vector,
         NOW()
       )
     `);
 
     return { success: true };
   } catch (error) {
-    console.error('Failed to save embedding in "Embeddings" table', error);
+    console.error('Failed to save embedding in "embeddings" table', error);
     throw error;
   }
 }

@@ -1,4 +1,4 @@
-import type { InferSelectModel } from 'drizzle-orm';
+import { InferSelectModel } from 'drizzle-orm';
 import {
   pgTable,
   varchar,
@@ -17,7 +17,6 @@ export const user = pgTable('User', {
   email: varchar('email', { length: 64 }).notNull(),
   password: varchar('password', { length: 64 }),
 });
-
 export type User = InferSelectModel<typeof user>;
 
 export const chat = pgTable('Chat', {
@@ -31,7 +30,6 @@ export const chat = pgTable('Chat', {
     .notNull()
     .default('private'),
 });
-
 export type Chat = InferSelectModel<typeof chat>;
 
 export const message = pgTable('Message', {
@@ -43,7 +41,6 @@ export const message = pgTable('Message', {
   content: json('content').notNull(),
   createdAt: timestamp('createdAt').notNull(),
 });
-
 export type Message = InferSelectModel<typeof message>;
 
 export const vote = pgTable(
@@ -63,7 +60,6 @@ export const vote = pgTable(
     };
   },
 );
-
 export type Vote = InferSelectModel<typeof vote>;
 
 export const document = pgTable(
@@ -86,7 +82,6 @@ export const document = pgTable(
     };
   },
 );
-
 export type Document = InferSelectModel<typeof document>;
 
 export const suggestion = pgTable(
@@ -112,21 +107,25 @@ export const suggestion = pgTable(
     }),
   }),
 );
-
 export type Suggestion = InferSelectModel<typeof suggestion>;
-export const embeddings = pgTable('Embeddings', {
-  // Tu Neon usa gen_random_uuid() → Drizzle: defaultRandom()
+
+/**
+ * Tabla "embeddings" para almacenar vectores (OpenAI Embeddings).
+ */
+export const embeddings = pgTable('embeddings', {
+  // ID autogenerado con gen_random_uuid (en Neon)
   id: uuid('id').defaultRandom().primaryKey().notNull(),
 
-  // TEXT NOT NULL
+  // Referencia opcional al documento al que pertenece
+  documentId: uuid('document_id'),
+
+  // Texto "plano" del que se generó el vector
   content: text('content').notNull(),
 
-  // VECTOR(1536) NOT NULL
+  // El embedding con dimensión 1536
   embedding: vector('embedding', { dimensions: 1536 }).notNull(),
 
-  // TIMESTAMP DEFAULT now()
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  // Fecha de creación
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
-
-// Para que puedas inferir su tipo
 export type Embeddings = InferSelectModel<typeof embeddings>;
