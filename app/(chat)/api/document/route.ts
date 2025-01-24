@@ -56,8 +56,7 @@ export async function POST(request: Request) {
     content,
     title,
     kind,
-    updateEmbedding = false,
-  }: { content: string; title: string; kind: BlockKind; updateEmbedding?: boolean } = await request.json();
+  }: { content: string; title: string; kind: BlockKind } = await request.json();
 
   if (session.user?.id) {
     // 3. Guardar documento en la tabla "Document"
@@ -69,24 +68,12 @@ export async function POST(request: Request) {
       userId: session.user.id,
     });
 
-    // 4. Generar y guardar embedding (siempre que el contenido cambie)
+    // 4. Generar y guardar embedding (una sola vez)
     try {
       const embedding = await generateEmbeddings(content);
       if (!embedding) {
         throw new Error('No se pudo generar el embedding');
       }
-
-      // Primero intentamos actualizar cualquier embedding existente
-      const result = await db.execute(sql`
-        UPDATE embeddings 
-        SET content = ${content}, 
-            embedding = ${`[${embedding.join(',')}]`}::vector,
-            created_at = NOW()
-        WHERE document_id = ${id}::uuid
-      `);
-      
-      // Si no existe un embedding previo, creamos uno nuevo
-      if (result.rowCount === 0) {
 
       await saveEmbedding({
         documentId: id, // Relaciona tu documento con este embedding
