@@ -1,3 +1,4 @@
+
 // nextjs-ai-chatbot-main/lib/ai/embedding.ts
 
 import { embedMany } from 'ai';
