@@ -1,12 +1,9 @@
-// app/(chat)/api/document/route.ts
-
 import { auth } from '@/app/(auth)/auth';
 import { BlockKind } from '@/components/block';
 import {
   deleteDocumentsByIdAfterTimestamp,
   getDocumentsById,
   saveDocument,
-  saveEmbedding,  // <-- NUEVO: importar la función para guardar embeddings
 } from '@/lib/db/queries';
 
 export async function GET(request: Request) {
@@ -46,13 +43,12 @@ export async function POST(request: Request) {
     return new Response('Missing id', { status: 400 });
   }
 
-  // 1. Validar sesión
   const session = await auth();
-  if (!session || !session.user) {
+
+  if (!session) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // 2. Extraer datos del body: content, title, kind
   const {
     content,
     title,
@@ -60,7 +56,6 @@ export async function POST(request: Request) {
   }: { content: string; title: string; kind: BlockKind } = await request.json();
 
   if (session.user?.id) {
-    // 3. Guardar documento en tu tabla "Document"
     const document = await saveDocument({
       id,
       content,
@@ -69,21 +64,8 @@ export async function POST(request: Request) {
       userId: session.user.id,
     });
 
-    // 4. (NUEVO) Guardar embedding en tu tabla "Embeddings"
-    //    - Si tu tabla "Embeddings" usa SERIAL para ID, no necesitas pasar `id`.
-    //    - Si quieres que coincida con el ID del documento, pásalo.
-    //    - Toma en cuenta que tu migración actual dice "id SERIAL", 
-    //      mientras que tu schema drizzle dice "uuid".
-    //      Con SERIAL, se ignora el `id` que pases. 
-    //      Así que lo más seguro es:
-    await saveEmbedding({
-      // id, // <--- Descomenta si quieres forzar que sea el mismo; 
-      content,
-    });
-
     return Response.json(document, { status: 200 });
   }
-
   return new Response('Unauthorized', { status: 401 });
 }
 
@@ -104,6 +86,7 @@ export async function PATCH(request: Request) {
   }
 
   const documents = await getDocumentsById({ id });
+
   const [document] = documents;
 
   if (document.userId !== session.user.id) {
